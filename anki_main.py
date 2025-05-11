@@ -14,11 +14,12 @@ class SimpleGoogleTranslate:
         return GoogleTranslator(source=self.source, target=self.target).translate(text=text)
 
 class Anki:
-    def __init__(self, ANKI_CONNECT_URL = 'http://localhost:8765', deck_name='Deutsche Lernen::Dev_deck'):
+    def __init__(self, ANKI_CONNECT_URL = 'http://localhost:8765', deck_name='Deutsche Lernen::Dev_deck', model_name_default='Basic (and reversed card)_main'):
         self.ANKI_CONNECT_URL = ANKI_CONNECT_URL
         self.deck_name = deck_name
         self.notes_ids = self.get_note_ids_from_deck()
         self.notes_info = self.get_notes_info()
+        self.model_name_default = model_name_default
 
     def invoke(self, action, params=None):
         response = requests.post(self.ANKI_CONNECT_URL, json={
@@ -162,6 +163,32 @@ class Anki:
                 }
             })
 
+    def note_exists_in_deck(self, field_name, value, model_name=None):
+        if model_name == None: model_name = self.model_name_default
+        query = f'deck:"{self.deck_name}" note:"{model_name}" "{field_name}:{value}"'
+        note_ids = self.invoke("findNotes", {"query": query})
+        return len(note_ids) > 0
+
+    def add_note_to_deck(self, fields, model_name=None, tags=None):
+        if model_name == None: model_name = self.model_name_default
+        note = {
+            "deckName": self.deck_name,
+            "modelName": model_name,
+            "fields": fields,
+            "options": {
+                "allowDuplicate": False,
+                "duplicateScope": "deck"
+            },
+            "tags": tags or [],
+            "audio": [],
+            "picture": [],
+            "video": []
+        }
+
+        result = self.invoke("addNote", {"note": note})
+        print(f"Добавлена заметка. ID: {result}")
+        return result
+
 def read_xlsx_file(filename, sheet_name):
     # Загружаем файл
     workbook = openpyxl.load_workbook(filename)
@@ -185,15 +212,65 @@ def read_xlsx_file(filename, sheet_name):
 
     return data
 
+def add_notes_base_model(list_notes):
+    for note in list_notes:
+        if not anki.note_exists_in_deck(field_name="base_de", value=note['full_de']):
+            for field in note:
+                if note[field] == None:
+                    note[field] = ''
+
+            anki.add_note_to_deck(
+                    fields={
+                        "full_de": note['full_de'],
+                        "base_de": note['base_de'],
+                        "base_ru": note['base_ru'],
+                        "artikel_de": note['artikel_de'],
+                        "plural_de": note['plural_de'],
+                        "notes": note['notes'],
+                        "audio_text_de": note['audio_text_de'],
+                        "s1_de": note['s1_de'],
+                        "s1_ru": note['s1_ru'],
+                        "s2_de": note['s2_de'],
+                        "s2_ru": note['s2_ru'],
+                        "s3_de": note['s3_de'],
+                        "s3_ru": note['s3_ru'],
+                        "s4_de": note['s4_de'],
+                        "s4_ru": note['s4_ru'],
+                        "s5_de": note['s5_de'],
+                        "s5_ru": note['s5_ru'],
+                        "s6_de": note['s6_de'],
+                        "s6_ru": note['s6_ru'],
+                        "s7_de": note['s7_de'],
+                        "s7_ru": note['s7_ru'],
+                        "s8_de": note['s8_de'],
+                        "s8_ru": note['s8_ru'],
+                        "s9_de": note['s9_de'],
+                        "s9_ru": note['s9_ru'],
+                        
+                    },
+                    tags=[]
+                    )
+        else:
+            print(f"Запись {note["base_de"]} is already exists")
+            pass
+
 if __name__ == "__main__":
     translator = SimpleGoogleTranslate()
     # deck_name = "Deutsche Lernen::B1_Wortliste_lernen"
     deck_name = "Deutsche Lernen::Dev_deck"
-
+    # model_name = "Basic (and reversed card)_main"
+    test_list_load_notes = [{
+                            "base_de": "Was ist das?",
+                            "base_ru": "Das ist ein Tisch."
+                            },
+                            {
+                            "base_de": "Was gibt es neues?",
+                            "base_ru": "Что нового."
+                            },]
     anki = Anki(deck_name=deck_name)
-
-    anki.translate_base(de_field='base_de', ru_field='base_ru')
-    # anki.translate_base(notes=anki_notes, de_field='s3_de', ru_field='s3_ru')
-
-    # xlsx_file_content = read_xlsx_file(filename="for_import.xlsx", sheet_name="Sheet2")
+    xlsx_file_content = read_xlsx_file(filename="for_import.xlsx", sheet_name="Sheet2")
     # pprint(xlsx_file_content)
+    add_notes_base_model(xlsx_file_content)
+
+    # anki.translate_base(de_field='base_de', ru_field='base_ru')
+    # anki.translate_base(notes=anki_notes, de_field='s3_de', ru_field='s3_ru')
