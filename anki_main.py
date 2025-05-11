@@ -14,9 +14,11 @@ class SimpleGoogleTranslate:
         return GoogleTranslator(source=self.source, target=self.target).translate(text=text)
 
 class Anki:
-    def __init__(self, ANKI_CONNECT_URL = 'http://localhost:8765'):
+    def __init__(self, ANKI_CONNECT_URL = 'http://localhost:8765', deck_name='Deutsche Lernen::Dev_deck'):
         self.ANKI_CONNECT_URL = ANKI_CONNECT_URL
-        pass
+        self.deck_name = deck_name
+        self.notes_ids = self.get_note_ids_from_deck()
+        self.notes_info = self.get_notes_info()
 
     def invoke(self, action, params=None):
         response = requests.post(self.ANKI_CONNECT_URL, json={
@@ -28,26 +30,26 @@ class Anki:
             raise Exception(response["error"])
         return response["result"]
 
-    def get_note_ids_from_deck(self, deck_name):
-        query = f'deck:"{deck_name}"'
+    def get_note_ids_from_deck(self):
+        query = f'deck:"{self.deck_name}"'
         return self.invoke('findNotes', {'query': query})
 
-    def get_notes_info(self, note_ids):
-        return self.invoke('notesInfo', {'notes': note_ids})
+    def get_notes_info(self,):
+        return self.invoke('notesInfo', {'notes': self.notes_ids})
 
-    def show_notes_from_deck(self, deck_name):
-        note_ids = self.get_note_ids_from_deck(deck_name)
-        print(f"Найдено заметок в колоде '{deck_name}': {len(note_ids)}")
+    def show_notes(self):
+        # note_ids = self.get_note_ids_from_deck(self.deck_name)
+        print(f"Найдено заметок в колоде '{self.deck_name}': {len(self.notes_ids)}")
         
-        if not note_ids:
+        if not self.notes_ids:
             print("Нет заметок.")
             return
         
-        notes = self.get_notes_info(note_ids)
+        notes = self.get_notes_info()
         for note in notes:
             pprint(note)
 
-    def show_note_by_id(self, note_id):
+    def show_note_by_note_id(self, note_id):
         result = self.get_notes_info([note_id])
         if not result:
             print(f"Заметка с ID {note_id} не найдена.")
@@ -56,13 +58,13 @@ class Anki:
         pprint(note)
 
     def update_note_field(self, note_id, field_name, new_value):
-        note_info = self.get_notes_info([note_id])
-        if not note_info:
+        # note_info = self.get_notes_info()
+        if not self.notes_info:
             print(f"Заметка с ID {note_id} не найдена.")
             return
 
         # Проверка существования поля
-        fields = note_info[0]['fields']
+        fields = self.notes_info[0]['fields']
         if field_name not in fields:
             print(f"Поле '{field_name}' не найдено в заметке.")
             return
@@ -78,9 +80,9 @@ class Anki:
         })
         print(f"Поле '{field_name}' обновлено на: {new_value}")
 
-    def translate_base(self, notes, de_field, ru_field, update_only_empty_values = True):
-        notes_count = len(notes)
-        for ind,note in enumerate(notes):
+    def translate_base(self, de_field, ru_field, update_only_empty_values = True):
+        notes_count = len(self.notes_info)
+        for ind, note in enumerate(self.notes_info):
             note_id = note['noteId']
             de_value = note['fields'][de_field]['value']
             ru_value = note['fields'][ru_field]['value']
@@ -185,17 +187,12 @@ def read_xlsx_file(filename, sheet_name):
 
 if __name__ == "__main__":
     translator = SimpleGoogleTranslate()
-    anki = Anki()
     # deck_name = "Deutsche Lernen::B1_Wortliste_lernen"
     deck_name = "Deutsche Lernen::Dev_deck"
-    
-    anki_note_ids = anki.get_note_ids_from_deck(deck_name=deck_name)
-    anki_notes = anki.get_notes_info(note_ids=anki_note_ids)
-    pprint(anki.show_notes_from_deck(deck_name=deck_name))
-    # anki.generate_and_insert_tts(notes=anki_notes,source_field="audio_text_de",target_field="base_audio")
-    # anki.show_notes_from_deck(deck_name=deck_name)
 
-    # anki.translate_base(notes=anki_notes, de_field='base_de', ru_field='base_ru')
+    anki = Anki(deck_name=deck_name)
+
+    anki.translate_base(de_field='base_de', ru_field='base_ru')
     # anki.translate_base(notes=anki_notes, de_field='s3_de', ru_field='s3_ru')
 
     # xlsx_file_content = read_xlsx_file(filename="for_import.xlsx", sheet_name="Sheet2")
