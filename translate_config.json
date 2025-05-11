@@ -1,0 +1,11 @@
+{
+    "desc_name": "Deutsche Lernen::Test_desc",
+    "translation": 
+    [
+        {"from":"base_de", "to":"base_ru"}
+    ],
+    "recording":
+    [
+        {"from": "base_de", "to": "base_ru"}
+    ]
+}
