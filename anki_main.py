@@ -1,7 +1,11 @@
 from deep_translator import GoogleTranslator
+from gtts import gTTS
+from g4f.client import Client
 from pprint import pprint
 import json
 import uuid
+import base64
+import os
 import requests
 import openpyxl
 
@@ -13,8 +17,13 @@ class SimpleGoogleTranslate:
     def translate(self, text):
         return GoogleTranslator(source=self.source, target=self.target).translate(text=text)
 
+class Recorder:
+    def make_record (text, save_to_path, lang = 'de'):
+        tts = gTTS(text=text, lang=lang)
+        tts.save(save_to_path)
+
 class Anki:
-    def __init__(self, ANKI_CONNECT_URL = 'http://localhost:8765', deck_name='Deutsche Lernen::Dev_deck', model_name_default='Basic (and reversed card)_main'):
+    def __init__(self, ANKI_CONNECT_URL = 'http://localhost:8765', AUDIO_FOLDER = "tmp_audio", deck_name='Deutsche Lernen::Dev_deck', model_name_default='Basic (and reversed card)_main'):
         self.ANKI_CONNECT_URL = ANKI_CONNECT_URL
         self.deck_name = deck_name
         self.notes_ids = self.get_note_ids_from_deck()
@@ -104,6 +113,7 @@ class Anki:
                 print(f"Field {de_field} is empty")
 
     def generate_and_insert_tts(self, notes, source_field, target_field):
+        ''' Без API ключа не работает'''
         for note in notes:
             note_id = note['noteId']
             note_info = self.get_notes_info([note_id])
@@ -142,7 +152,7 @@ class Anki:
             # Вставка [sound:filename] в нужное поле
             sound_tag = f"[sound:{filename}]"
 
-            result = invoke("updateNoteFields", {
+            result = self.invoke("updateNoteFields", {
                 "note": {
                     "id": note_id,
                     "fields": {
@@ -188,6 +198,40 @@ class Anki:
         result = self.invoke("addNote", {"note": note})
         print(f"Добавлена заметка. ID: {result}")
         return result
+
+    def add_audio_to_note(self, note_id, mp3_path, field_name):
+        if not os.path.exists(mp3_path):
+            raise FileNotFoundError(f"Файл не найден: {mp3_path}")
+
+        filename = os.path.basename(mp3_path)
+        # sound_tag = f"[sound:record-{filename}]"
+        sound_tag = f"[sound:{filename}]"
+
+        with open(mp3_path, "rb") as f:
+            audio_data = f.read()
+        b64_audio = base64.b64encode(audio_data).decode("utf-8")
+
+        # Загружаем файл в медиа Anki
+        self.invoke("storeMediaFile", {
+            "filename": filename,
+            "data": b64_audio
+            })
+
+        # Обновляем поле заметки
+        self.invoke("updateNoteFields", {
+            "note": {
+                "id": note_id,
+                "fields": {
+                    field_name: sound_tag
+                    }
+            }
+            })
+        # Удаляем файл после добавления
+        try:
+            os.remove(mp3_path)
+            # print(f"Файл '{mp3_path}' удалён.")
+        except Exception as e:
+            print(f"Не удалось удалить файл: {e}")
 
 def read_xlsx_file(filename, sheet_name):
     # Загружаем файл
@@ -254,23 +298,39 @@ def add_notes_base_model(list_notes):
             print(f"Запись {note["base_de"]} is already exists")
             pass
 
+def gpt_text(content):
+    client = Client()
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": str(content)}],
+        web_search=False
+    )
+    return response.choices[0].message.content
+
+def make_audio_records(source_field='s7_de', dest_field='s7_audio'):
+    notes_ids = anki.notes_info
+    for ind, note in enumerate(notes_ids):
+        print (note['fields']['base_de']['value'])
+        if not note['fields'][source_field]['value'] == '':
+            noteId = note['noteId']
+            audio_file_name = f"record-{uuid.uuid4()}.mp3"
+            tts = gTTS(text=note['fields'][source_field]['value'], lang='de')
+            tts.save(f"{audio_file_name}")
+            anki.add_audio_to_note(note_id=noteId, mp3_path=f"{audio_file_name}", field_name=dest_field)
+        else:
+            print(f"Поле {source_field} для ноты {note['noteId']} пустое")
+
 if __name__ == "__main__":
     translator = SimpleGoogleTranslate()
     # deck_name = "Deutsche Lernen::B1_Wortliste_lernen"
-    deck_name = "Deutsche Lernen::Dev_deck"
+    deck_name = "Deutsche Lernen::Wortschatz"
+    # deck_name = "Deutsche Lernen::Dev_deck"
     # model_name = "Basic (and reversed card)_main"
-    test_list_load_notes = [{
-                            "base_de": "Was ist das?",
-                            "base_ru": "Das ist ein Tisch."
-                            },
-                            {
-                            "base_de": "Was gibt es neues?",
-                            "base_ru": "Что нового."
-                            },]
     anki = Anki(deck_name=deck_name)
     xlsx_file_content = read_xlsx_file(filename="for_import.xlsx", sheet_name="Sheet2")
     # pprint(xlsx_file_content)
-    add_notes_base_model(xlsx_file_content)
+    
+    # add_notes_base_model(xlsx_file_content)
+    
+    make_audio_records(source_field='s9_de',dest_field='s9_audio')
 
-    # anki.translate_base(de_field='base_de', ru_field='base_ru')
-    # anki.translate_base(notes=anki_notes, de_field='s3_de', ru_field='s3_ru')
