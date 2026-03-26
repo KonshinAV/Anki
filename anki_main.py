@@ -186,7 +186,7 @@ class Anki:
             "modelName": model_name,
             "fields": fields,
             "options": {
-                "allowDuplicate": False,
+                "allowDuplicate": True,
                 "duplicateScope": "deck"
             },
             "tags": tags or [],
@@ -268,8 +268,8 @@ def add_notes_base_model(list_notes):
                         "full_de": note['full_de'],
                         "base_de": note['base_de'],
                         "base_ru": note['base_ru'],
-                        "artikel_de": note['artikel_de'],
-                        "plural_de": note['plural_de'],
+                        # "artikel_de": note['artikel_de'],
+                        # "plural_de": note['plural_de'],
                         "notes": note['notes'],
                         "audio_text_de": note['audio_text_de'],
                         "s1_de": note['s1_de'],
@@ -307,7 +307,7 @@ def gpt_text(content):
     )
     return response.choices[0].message.content
 
-def make_audio_records(source_field='s7_de', dest_field='s7_audio'):
+def make_audio_records(source_field='audio_text_de', dest_field='base_audio'):
     notes_ids = anki.notes_info
     for ind, note in enumerate(notes_ids):
         print (note['fields']['base_de']['value'])
@@ -322,15 +322,22 @@ def make_audio_records(source_field='s7_de', dest_field='s7_audio'):
 
 if __name__ == "__main__":
     translator = SimpleGoogleTranslate()
-    # deck_name = "Deutsche Lernen::B1_Wortliste_lernen"
-    deck_name = "Deutsche Lernen::Wortschatz"
-    # deck_name = "Deutsche Lernen::Dev_deck"
-    # model_name = "Basic (and reversed card)_main"
+    deck_name = "Deutsche Lernen::Dev_deck"
     anki = Anki(deck_name=deck_name)
     xlsx_file_content = read_xlsx_file(filename="for_import.xlsx", sheet_name="Sheet2")
-    # pprint(xlsx_file_content)
     
-    # add_notes_base_model(xlsx_file_content)
-    
+    add_notes_base_model(xlsx_file_content)
+    # Перечиываем колоду / пересоздаем объект колоды
+    anki = Anki(deck_name=deck_name)
+
+    make_audio_records()
+    make_audio_records(source_field='s1_de',dest_field='s1_audio')
+    make_audio_records(source_field='s2_de',dest_field='s2_audio')
+    make_audio_records(source_field='s3_de',dest_field='s3_audio')
+    make_audio_records(source_field='s4_de',dest_field='s4_audio')
+    make_audio_records(source_field='s5_de',dest_field='s5_audio')
+    make_audio_records(source_field='s6_de',dest_field='s6_audio')
+    make_audio_records(source_field='s7_de',dest_field='s7_audio')
+    make_audio_records(source_field='s8_de',dest_field='s8_audio')
     make_audio_records(source_field='s9_de',dest_field='s9_audio')
 
