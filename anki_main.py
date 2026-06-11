@@ -244,14 +244,19 @@ def read_xlsx_file(filename, sheet_name):
     # Получаем нужный лист
     sheet = workbook[sheet_name]
 
-    # Получаем заголовки из первой строки
+    # Заголовки из первой строки
     header = [cell for cell in next(sheet.iter_rows(values_only=True))]
 
-    # Читаем остальные строки и формируем список словарей, пропуская пустые строки
+    # Остальные строки и список словарей, пропуская пустые строки
     data = []
     for row in sheet.iter_rows(min_row=2, values_only=True):
         if any(cell is not None for cell in row):  # Проверка на непустую строку
-            row_dict = dict(zip(header, row))
+            # Создаем словарь, экранируя кавычки в строковых значениях
+            row_dict = {
+                key: (val.replace('"', "''") if isinstance(val, str) else val)
+                for key, val in zip(header, row)
+            }
+            
             data.append(row_dict)
 
     return data
@@ -310,7 +315,7 @@ def gpt_text(content):
 def make_audio_records(source_field='audio_text_de', dest_field='base_audio'):
     notes_ids = anki.notes_info
     for ind, note in enumerate(notes_ids):
-        print (note['fields']['base_de']['value'])
+        print (f"{note['fields']['base_de']['value']} -> {note['fields'][source_field]['value']}")
         if not note['fields'][source_field]['value'] == '':
             noteId = note['noteId']
             audio_file_name = f"record-{uuid.uuid4()}.mp3"
@@ -331,13 +336,4 @@ if __name__ == "__main__":
     anki = Anki(deck_name=deck_name)
 
     make_audio_records()
-    make_audio_records(source_field='s1_de',dest_field='s1_audio')
-    make_audio_records(source_field='s2_de',dest_field='s2_audio')
-    make_audio_records(source_field='s3_de',dest_field='s3_audio')
-    make_audio_records(source_field='s4_de',dest_field='s4_audio')
-    make_audio_records(source_field='s5_de',dest_field='s5_audio')
-    make_audio_records(source_field='s6_de',dest_field='s6_audio')
-    make_audio_records(source_field='s7_de',dest_field='s7_audio')
-    make_audio_records(source_field='s8_de',dest_field='s8_audio')
-    make_audio_records(source_field='s9_de',dest_field='s9_audio')
-
+    for i in range(9): make_audio_records(source_field=f's{i+1}_de', dest_field=f's{i+1}_audio')
