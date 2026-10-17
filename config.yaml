@@ -1,0 +1,51 @@
+# Конфигурация anki_import.py
+# Относительные пути считаются от папки, в которой лежит скрипт.
+# Параметры командной строки (--deck, --file и т.д.) имеют приоритет над этим файлом.
+
+anki:
+  url: "http://localhost:8765"          # адрес AnkiConnect
+  deck: "Deutsche Lernen::Dev_deck"     # колода
+  model: "Basic (and reversed card)_main"   # тип заметки
+  timeout: 60                           # таймаут запросов к AnkiConnect, сек
+
+excel:
+  file: "for_import.xlsx"               # если файла нет, он будет создан с шапкой
+  sheet: "Sheet1"                       # лист с данными
+
+fields:
+  # Поле, по которому определяются дубликаты (колонка в Excel = поле в Anki)
+  key: "base_de"
+  # Обычные поля (они же колонки Excel, в этом порядке)
+  base:
+    - base_de
+    - full_de
+    - audio_text_de
+    - base_ru
+  # Поля предложений: шаблоны, {n} подставляется от 1 до sentences_count
+  sentences_count: 9
+  sentence_fields:
+    - "s{n}_de"
+    - "s{n}_ru"
+
+audio:
+  engine: "gtts"                        # gtts | edge
+  gtts_lang: "de"                       # язык для gTTS
+  edge_voice: "de-DE-KatjaNeural"       # для edge-tts: de-DE-KatjaNeural (жен.) / de-DE-KillianNeural (муж.)
+  workers: 4                            # параллельных запросов к TTS
+  cache_dir: "tmp_audio"                # временная папка для .mp3
+  keep_files: false                     # true = не удалять .mp3 после выполнения
+  # Какое поле озвучиваем -> в какое кладём [sound:...]
+  main_source: "audio_text_de"
+  main_dest: "base_audio"
+  sentence_source: "s{n}_de"
+  sentence_dest: "s{n}_audio"
+
+translate:                              # используется только с флагом --translate
+  source_lang: "de"
+  target_lang: "ru"
+  source_field: "base_de"
+  target_field: "base_ru"
+
+retry:
+  attempts: 3                           # число попыток при сетевых ошибках
+  delay: 2.0                            # базовая пауза между попытками, сек

@@ -1,0 +1,13 @@
+# Зависимости anki_import.py (Python 3.8+)
+# Установка: pip install -r requirements.txt
+ 
+# --- обязательные ---
+openpyxl>=3.1        # чтение/создание Excel
+requests>=2.28       # запросы к AnkiConnect
+PyYAML>=6.0          # чтение config.yaml
+gTTS>=2.3            # озвучка (audio.engine: gtts, по умолчанию)
+ 
+# --- опциональные (импортируются только при использовании) ---
+edge-tts>=6.1        # озвучка (audio.engine: edge / --engine edge)
+deep-translator>=1.11  # автоперевод (--translate)
+ 
